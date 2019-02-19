@@ -11,6 +11,7 @@ import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -41,12 +42,14 @@ public class ServerMain {
     /**
      * The port that the server listens on.
      */
-    private static final int PORT = 8888;
+	private static ArrayList<String> blockIP;
+    private static int PORT = 88;
     public static String myIP="";
     static ArrayList<String> myIPAddressesList;
-    static ArrayList<String> myStringArray1;
+    //static ArrayList<String> myStringArray1;
+    static ArrayList<String> myMessageQueue;
     static ArrayList<String> myNameList;
-    String textRecvIn;
+    
     static ServerMain thisObj=new ServerMain();
     /**
      * The set of all names of clients in the chat room.  Maintained
@@ -116,11 +119,25 @@ public class ServerMain {
      */
     public static void main(String[] args) throws Exception {
         System.out.println("The server is running...");
+        myIPAddressesList = new ArrayList();
+        blockIP = new ArrayList();
+        //myStringArray1 = new ArrayList();
+        myNameList = new ArrayList();
+        myMessageQueue = new ArrayList();
         myIP = getLocalHostLANAddress().toString().substring(1);
         System.out.println("Host IP..." + myIP);
+        if( args.length > 0 )
+        {
+        	PORT = Integer.parseInt(args[0]);
+        	Logger.isEnabled = Boolean.parseBoolean(args[1]);
+        	for ( int i = 2; i < args.length; i++){
+        		blockIP.add(args[i]);
+        		System.out.println("Blocking IP: " + args[i]);
+        	}
+        }
         System.out.println("Port..." + PORT);
         ServerSocket listener = new ServerSocket(PORT);
-        
+        Logger.addRecordToLog("Server started!");
         try {
             while (true) {
             	thisObj.new ThreadListener(listener.accept()).start();                
@@ -133,108 +150,136 @@ public class ServerMain {
     /**
      * Sender handler thread
      */
-    public void processMsgFromHost(ArrayList<String> a) {
+    public String processMsgFromHost(ArrayList<String> a) {
         //server processing messages received from host
-        
-    };
-
-    public void processMsgFromClient(ArrayList<String> a) {
-    	//server processing message received from clients
-        if( a.get(2).split(":").length > 1 ){
-            String message = a.get(2).split(":")[0];
-            String value = a.get(2).split(":")[1];
-            if( message.compareTo("ping") == 0 )
-            {
-                //host processing messages received from clients
-                if( !myIPAddressesList.contains(a.get(1)) ) {
-                    myStringArray1.add("P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value);
-                    myIPAddressesList.add(a.get(1));
-                    myNameList.add(value);
-                }
-                try {
-                    Thread.sleep(1000);//wait for client to start listening
-                }
-                catch( Exception e )
-                {
-                    e.printStackTrace();
-                }
-                broadCast(myStringArray1.toString());
-                System.out.println( "Update sent to:" + myStringArray1.toString());                    
-            }
-            else if( message.compareTo("PingHost") == 0 )
-            {
-                sendMessage(value,myIP,PORT,"HostResponse:" + myIP + "-servergame");
-                System.out.println("Response sent to:" + value);                    
-            }
-        }
-    };
-    public void sendMessage( String destination, String source, int port, String message ){
-        String type = "host";            
-        message = type + "~" + source + "~" + message;
-        DataOutputStream senderDataOutputStream=null;
-        DataInputStream senderDataInputStream=null;
-        Socket senderSocket=null;
-        try{
-        	System.out.println("attempting connection to :" + destination + "port:" + port);                
-            senderSocket = new Socket(destination,port);
-            senderDataOutputStream = new DataOutputStream(senderSocket.getOutputStream());
-            senderDataInputStream = new DataInputStream(senderSocket.getInputStream());
-            senderDataOutputStream.writeUTF(message);
-            senderDataOutputStream.flush();
-            String ackMessage = senderDataInputStream.readUTF();
-            System.out.println("sent message:" + message);
-            System.out.println("to: " + destination + "port:" + port);
-            System.out.println("ack: " + ackMessage);                
-        }
-        catch ( IOException e )
-        {
-            e.printStackTrace();
-        }
-        finally{
-        	if (senderDataOutputStream != null) {
-                try {
-                	senderDataOutputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (senderDataInputStream != null) {
-                try {
-                	senderDataInputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+    	String response = "";
+    	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("IamHost")){            
+            String value = a.get(2).split(":")[1];           
+            //add host to list
+            if( !myIPAddressesList.contains(a.get(1)) ) {
+            	//myStringArray1.add("P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value);
+                myIPAddressesList.add(a.get(1));
+                myNameList.add(value);
+                System.out.println("Host added:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Host added:" + a.get(1) + "-" + value);
             }
             try {
-                senderSocket.close();
-            } catch (IOException e) {
+                Thread.sleep(500);//wait for client to start listening
             }
-        }
-    };
-    private void broadCast( String message ){
-        for (int i = 0; i < myIPAddressesList.size(); i++) {
-            //if (myIPAddressesList.get(i).compareTo(gHostIP) != 0) {
-            sendMessage(myIPAddressesList.get(i), myIP, PORT, message);
-            //}
-        }
-    };
-    public class ThreadSender extends Thread {
-    	public void run() {
-	    	StringTokenizer tokenizer = new StringTokenizer(thisObj.textRecvIn, "~");
-	
-	        ArrayList<String> a = new ArrayList();
-	
-	        while (tokenizer.hasMoreTokens()) {
-	            String token = tokenizer.nextToken();
-	            a.add(token);
-	        }
-	        String type = a.get(0);
-	        if (type.compareTo("host") == 0 )
-	            thisObj.processMsgFromHost(a);
-	        else if (type.compareTo("client") == 0 )
-	        	thisObj.processMsgFromClient(a);
+            catch( Exception e )
+            {
+                e.printStackTrace();
+            }                
+        }   
+    	else if (a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("StopHosting")){    
+    		String value = a.get(2).split(":")[1]; 
+    		if( myIPAddressesList.contains(a.get(1)) ) {
+    			//String str = "P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value;
+            	//myStringArray1.remove(str);
+                myIPAddressesList.remove(a.get(1));
+                myNameList.remove(value);
+                System.out.println("Host removed:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Sizes of remaining arrays: " 
+                					+ "-myIPAddressesList:" + myIPAddressesList.size()
+                					+ "-myNameList:" + myNameList.size());
+            }
     	}
+    	else if( a.get(2).equals("GetMessages")){
+            response = thisObj.getSendersMessage(a);
+    	}
+    	else{
+    		System.out.println("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2) + "~" + a.get(3) +", queued ");
+    		Logger.addRecordToLog("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2) + "~" + a.get(3) +", queued ");
+    		myMessageQueue.add(a.get(0) + "~" + a.get(1) + "~" + a.get(2) + "~" + a.get(3));  
+    	}    
+    	return response;
+    };
+
+    public String processMsgFromClient(ArrayList<String> a) {
+    	String response = "";
+    	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("GetHost")){            
+            String value = a.get(2).split(":")[1];           
+            //get host lists
+            System.out.println(myIPAddressesList.size() + " hosts found...");
+            Logger.addRecordToLog(myIPAddressesList.size() + " hosts found...");
+            for(int i=0;i<myIPAddressesList.size();i++){
+            	if( i==0 )
+            		response = "host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);
+            	else
+            		response = response + "@host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);                            
+            	//myMessageQueue.add(response);
+            }            
+            System.out.println("Hosts list sent: " + response);
+            Logger.addRecordToLog("Hosts list sent: " + response);
+            try {
+                Thread.sleep(500);//wait for client to start listening
+            }
+            catch( Exception e )
+            {
+                e.printStackTrace();
+            }                
+        } 
+    	else if( a.get(2).equals("GetMessages")){
+            response = thisObj.getSendersMessage(a);
+    	}
+    	else{
+    		//server processing message received from clients
+    		System.out.println("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
+    		Logger.addRecordToLog("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
+        	myMessageQueue.add(a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3)); 
+    	}  
+    	return response;
+    };
+
+    public String prepareResponseMessage(String textRecvIn){
+        StringTokenizer tokenizer = new StringTokenizer(textRecvIn, "~");
+    	
+        ArrayList<String> a = new ArrayList();
+
+        while (tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+            a.add(token);
+        }
+        String message = "acknowledged by server";
+        if( a.size() < 4 )
+        	message = "failed to be stored in server, argument insufficient: " + a.size();
+        String type = a.get(0);
+        if (type.compareTo("host") == 0 )
+            message = thisObj.processMsgFromHost(a);
+        else if (type.compareTo("client") == 0 )
+        	message = thisObj.processMsgFromClient(a);
+        return message;
+    };
+    
+    public String getSendersMessage(ArrayList<String> a){
+    	String address = a.get(1);
+    	String response = "no messages pending";
+    	if( address.equals("192.168.43.1"))
+    	{
+    		response = "this is an invalid address, you are using tethering host IP!";
+    	}
+    	else
+    	{	    	
+	    	for(int i = 0; i < myMessageQueue.size(); i++){
+	    		StringTokenizer tokenizer = new StringTokenizer(myMessageQueue.get(i), "~");
+	        	
+	            ArrayList<String> arrStr = new ArrayList();
+	
+	            while (tokenizer.hasMoreTokens()) {
+	                String token = tokenizer.nextToken();
+	                arrStr.add(token);
+	            }
+	            if( arrStr.get(3).equals(a.get(1))){//address matches
+	            	response = myMessageQueue.get(i);
+	            	myMessageQueue.remove(i);
+	            	break;
+	            }
+	    	}
+    	}
+    	System.out.println("responding string: " + response + ", to: " + address);
+    	Logger.addRecordToLog("responding string: " + response + ", to: " + address);
+    	return response;
     };
     /**
      * A handler thread class.  Handlers are spawned from the listening
@@ -260,21 +305,38 @@ public class ServerMain {
          * acknowledges the name and registers the output stream for
          * the client in a global set, then repeatedly gets inputs and
          * broadcasts them.
-         */
+         */        
         public void run() {
             try {
 
                 // Create character streams for the socket.
-            	String message="acknowledged by server:" + myIP;
+            	String message="";
             	dataOutputStream = new DataOutputStream(socket.getOutputStream());
                 dataInputStream = new DataInputStream(socket.getInputStream());
-                dataOutputStream.writeUTF(message);
-                dataOutputStream.flush();
-                thisObj.textRecvIn = dataInputStream.readUTF();   
-                System.out.println(thisObj.textRecvIn); 
-                thisObj.new ThreadSender().start();
+                
+                String textRecvIn = dataInputStream.readUTF();  
+                Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                String senderAddr = socket.getInetAddress().toString();
+                
+                boolean IPAllowed = true;
+                for ( int i = 0; i< blockIP.size();i++){
+                	if( senderAddr.equals(blockIP.get(i)) )
+                    {
+    	                IPAllowed = false;
+                    }
+                }
+                if( IPAllowed )
+                { 
+                	System.out.println(senderAddr);
+	                System.out.println(timestamp.toString() + "|" + textRecvIn); 
+	                Logger.addRecordToLog(textRecvIn); 
+	                message = prepareResponseMessage(textRecvIn);              
+	                dataOutputStream.writeUTF(message);
+	                dataOutputStream.flush();
+                }
             } catch (IOException e) {
                 System.out.println(e);
+                Logger.addRecordToLog(e.toString());
             } finally {
                 // This client is going down!  Remove its name and its print
                 // writer from the sets, and close its socket.
