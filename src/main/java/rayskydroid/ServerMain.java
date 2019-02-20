@@ -177,7 +177,15 @@ public class ServerMain {
     			//String str = "P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value;
             	//myStringArray1.remove(str);
                 myIPAddressesList.remove(a.get(1));
-                myNameList.remove(value);
+                boolean removeSuccess = myNameList.remove(value);
+                if( !removeSuccess ){
+                	Logger.addRecordToLog("Unable to remove myNameList item:" + value);
+                	for( int i = 0; i< myNameList.size();i++ ){
+                		if( myNameList.get(i).compareTo(value) == 0 ){
+                			myNameList.remove(i);
+                		}
+                	}
+                }
                 System.out.println("Host removed:" + a.get(1) + "-" + value);
                 Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
                 Logger.addRecordToLog("Sizes of remaining arrays: " 
