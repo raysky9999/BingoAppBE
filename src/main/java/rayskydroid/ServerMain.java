@@ -159,7 +159,9 @@ public class ServerMain {
             if( !myIPAddressesList.contains(a.get(1)) ) {
             	//myStringArray1.add("P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value);
                 myIPAddressesList.add(a.get(1));
-                myNameList.add(value);
+                if( value.length() == 0 )
+                	value = "no name entered";
+                myNameList.add(value.trim());
                 System.out.println("Host added:" + a.get(1) + "-" + value);
                 Logger.addRecordToLog("Host added:" + a.get(1) + "-" + value);
             }
@@ -177,11 +179,13 @@ public class ServerMain {
     			//String str = "P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value;
             	//myStringArray1.remove(str);
                 myIPAddressesList.remove(a.get(1));
-                boolean removeSuccess = myNameList.remove(value);
+                if( value.length() == 0 )
+                	value = "no name entered";
+                boolean removeSuccess = myNameList.remove(value.trim());
                 if( !removeSuccess ){
-                	Logger.addRecordToLog("Unable to remove myNameList item:" + value);
+                	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
                 	for( int i = 0; i< myNameList.size();i++ ){
-                		if( myNameList.get(i).compareTo(value) == 0 ){
+                		if( myNameList.get(i).compareTo(value.trim()) == 0 ){
                 			myNameList.remove(i);
                 		}
                 	}
