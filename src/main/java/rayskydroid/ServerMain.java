@@ -184,11 +184,9 @@ public class ServerMain {
                 boolean removeSuccess = myNameList.remove(value.trim());
                 if( !removeSuccess ){
                 	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
-                	for( int i = 0; i< myNameList.size();i++ ){
-                		if( myNameList.get(i).compareTo(value.trim()) == 0 ){
-                			myNameList.remove(i);
-                		}
-                	}
+                	Logger.addRecordToLog("Clearing everything");
+                	myNameList.clear();
+                	myIPAddressesList.clear();
                 }
                 System.out.println("Host removed:" + a.get(1) + "-" + value);
                 Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
