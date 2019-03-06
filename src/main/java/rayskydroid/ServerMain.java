@@ -238,16 +238,19 @@ public class ServerMain {
         }
         String message = "acknowledged by server";
         if( a.size() < 4 )
-        	message = "failed to be stored in server, argument insufficient: " + a.size();        	        
-        String type = a.get(0);
-        if (type.compareTo("host") == 0 )
-            message = thisObj.processMsgFromHost(a);
-        else if (type.compareTo("client") == 0 )
-        	message = thisObj.processMsgFromClient(a);
-        else if (type.compareTo("clearHosts") == 0 ){
-        	message = "clearing all hosts...";
-        	clearHosts();
+        	message = "failed to be stored in server, argument insufficient: " + a.size();     
+        else{
+        	String type = a.get(0);
+	        if (type.compareTo("host") == 0 )
+	            message = thisObj.processMsgFromHost(a);
+	        else if (type.compareTo("client") == 0 )
+	        	message = thisObj.processMsgFromClient(a);
+	        else if (type.compareTo("clearHosts") == 0 ){
+	        	message = "clearing all hosts...";
+	        	clearHosts();
+	        }
         }
+        
         return message;
     };
     
