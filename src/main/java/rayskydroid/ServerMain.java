@@ -1,11 +1,8 @@
 package rayskydroid;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -14,9 +11,7 @@ import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.StringTokenizer;
-import java.util.logging.Handler;
 
 /**
  * A multithreaded chat room server.  When a client connects the
@@ -52,29 +47,16 @@ public class ServerMain {
     
     static ServerMain thisObj=new ServerMain();
     /**
-     * The set of all names of clients in the chat room.  Maintained
-     * so that we can check that new clients are not registering name
-     * already in use.
-     */
-    private static HashSet<String> names = new HashSet<String>();
-
-    /**
-     * The set of all the print writers for all the clients.  This
-     * set is kept so we can easily broadcast messages.
-     */
-    private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-
-    /**
      * get local ip address
      */
     private static InetAddress getLocalHostLANAddress() throws UnknownHostException {
         try {
             InetAddress candidateAddress = null;
             // Iterate all NICs (network interface cards)...
-            for (Enumeration ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements();) {
+            for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements();) {
                 NetworkInterface iface = (NetworkInterface) ifaces.nextElement();
                 // Iterate all IP addresses assigned to each card...
-                for (Enumeration inetAddrs = iface.getInetAddresses(); inetAddrs.hasMoreElements();) {
+                for (Enumeration<InetAddress> inetAddrs = iface.getInetAddresses(); inetAddrs.hasMoreElements();) {
                     InetAddress inetAddr = (InetAddress) inetAddrs.nextElement();
                     if (!inetAddr.isLoopbackAddress()) {
 
@@ -119,11 +101,11 @@ public class ServerMain {
      */
     public static void main(String[] args) throws Exception {
         System.out.println("The server is running...");
-        myIPAddressesList = new ArrayList();
-        blockIP = new ArrayList();
+        myIPAddressesList = new ArrayList<String>();
+        blockIP = new ArrayList<String>();
         //myStringArray1 = new ArrayList();
-        myNameList = new ArrayList();
-        myMessageQueue = new ArrayList();
+        myNameList = new ArrayList<String>();
+        myMessageQueue = new ArrayList<String>();
         myIP = getLocalHostLANAddress().toString().substring(1);
         System.out.println("Host IP..." + myIP);
         if( args.length > 0 )
@@ -184,9 +166,7 @@ public class ServerMain {
                 boolean removeSuccess = myNameList.remove(value.trim());
                 if( !removeSuccess ){
                 	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
-                	Logger.addRecordToLog("Clearing everything");
-                	myNameList.clear();
-                	myIPAddressesList.clear();
+                	clearHosts();
                 }
                 System.out.println("Host removed:" + a.get(1) + "-" + value);
                 Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
@@ -209,7 +189,6 @@ public class ServerMain {
     public String processMsgFromClient(ArrayList<String> a) {
     	String response = "";
     	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("GetHost")){            
-            String value = a.get(2).split(":")[1];           
             //get host lists
             System.out.println(myIPAddressesList.size() + " hosts found...");
             Logger.addRecordToLog(myIPAddressesList.size() + " hosts found...");
@@ -242,10 +221,16 @@ public class ServerMain {
     	return response;
     };
 
+    private void clearHosts(){
+    	Logger.addRecordToLog("Clearing everything");
+    	myNameList.clear();
+    	myIPAddressesList.clear();
+    };
+    
     public String prepareResponseMessage(String textRecvIn){
         StringTokenizer tokenizer = new StringTokenizer(textRecvIn, "~");
     	
-        ArrayList<String> a = new ArrayList();
+        ArrayList<String> a = new ArrayList<String>();
 
         while (tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
@@ -253,12 +238,16 @@ public class ServerMain {
         }
         String message = "acknowledged by server";
         if( a.size() < 4 )
-        	message = "failed to be stored in server, argument insufficient: " + a.size();
+        	message = "failed to be stored in server, argument insufficient: " + a.size();        	        
         String type = a.get(0);
         if (type.compareTo("host") == 0 )
             message = thisObj.processMsgFromHost(a);
         else if (type.compareTo("client") == 0 )
         	message = thisObj.processMsgFromClient(a);
+        else if (type.compareTo("clearHosts") == 0 ){
+        	message = "clearing all hosts...";
+        	clearHosts();
+        }
         return message;
     };
     
@@ -274,7 +263,7 @@ public class ServerMain {
 	    	for(int i = 0; i < myMessageQueue.size(); i++){
 	    		StringTokenizer tokenizer = new StringTokenizer(myMessageQueue.get(i), "~");
 	        	
-	            ArrayList<String> arrStr = new ArrayList();
+	            ArrayList<String> arrStr = new ArrayList<String>();
 	
 	            while (tokenizer.hasMoreTokens()) {
 	                String token = tokenizer.nextToken();

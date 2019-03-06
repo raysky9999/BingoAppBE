@@ -55,7 +55,6 @@ public class Logger {
                     final FileWriter fw = new FileWriter(logFile, true);
                     //write header format:
                     final BufferedWriter buf = new BufferedWriter(fw);
-                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                     buf.write( "description|timestamp|memorysize|threadid");
                     buf.newLine();
                     buf.flush();
