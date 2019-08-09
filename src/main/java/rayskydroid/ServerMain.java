@@ -105,7 +105,7 @@ public class ServerMain {
         System.out.println("The server is running...");
         Logger.addRecordToLog("The server is running...");
         myIPAddressesList = new ArrayList<String>();
-        lastResponded = new HashMap();
+        lastResponded = new HashMap<String, Date>();
         blockIP = new ArrayList<String>();
         //myStringArray1 = new ArrayList();
         myNameList = new ArrayList<String>();
