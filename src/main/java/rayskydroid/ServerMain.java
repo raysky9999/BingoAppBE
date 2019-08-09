@@ -10,10 +10,9 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.StringTokenizer;
+
 /**
  * A multithreaded chat room server.  When a client connects the
  * server requests a screen name by sending the client the
@@ -45,7 +44,6 @@ public class ServerMain {
     //static ArrayList<String> myStringArray1;
     static ArrayList<String> myMessageQueue;
     static ArrayList<String> myNameList;
-    static HashMap<String,Date> lastResponded;
     
     static ServerMain thisObj=new ServerMain();
     /**
@@ -103,9 +101,7 @@ public class ServerMain {
      */
     public static void main(String[] args) throws Exception {
         System.out.println("The server is running...");
-        Logger.addRecordToLog("The server is running...");
         myIPAddressesList = new ArrayList<String>();
-        lastResponded = new HashMap();
         blockIP = new ArrayList<String>();
         //myStringArray1 = new ArrayList();
         myNameList = new ArrayList<String>();
@@ -119,7 +115,6 @@ public class ServerMain {
         	for ( int i = 2; i < args.length; i++){
         		blockIP.add(args[i]);
         		System.out.println("Blocking IP: " + args[i]);
-        		Logger.addRecordToLog("Blocking IP: " + args[i]);
         	}
         }
         System.out.println("Port..." + PORT);
@@ -143,55 +138,41 @@ public class ServerMain {
     	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("IamHost")){            
             String value = a.get(2).split(":")[1];           
             //add host to list
-            try{
-	            if( !myIPAddressesList.contains(a.get(1)) ) {
-	            	//myStringArray1.add("P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value);
-	                myIPAddressesList.add(a.get(1));
-	                lastResponded.put(a.get(1), new Date());
-	                if( value.length() == 0 )
-	                	value = "no name entered";
-	                myNameList.add(value.trim());               
-	                System.out.println("Host added:" + a.get(1) + "-" + value);
-	                Logger.addRecordToLog("Host added:" + a.get(1) + "-" + value);
-	            }
-	            try {
-	                Thread.sleep(500);//wait for client to start listening
-	            }
-	            catch( Exception e )
-	            {
-	                e.printStackTrace();
-	            }   
+            if( !myIPAddressesList.contains(a.get(1)) ) {
+            	//myStringArray1.add("P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value);
+                myIPAddressesList.add(a.get(1));
+                if( value.length() == 0 )
+                	value = "no name entered";
+                myNameList.add(value.trim());
+                System.out.println("Host added:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Host added:" + a.get(1) + "-" + value);
             }
-            catch( Exception e ){
-            	Logger.addRecordToLog("ERROR during add host to list");
-            	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
+            try {
+                Thread.sleep(500);//wait for client to start listening
             }
+            catch( Exception e )
+            {
+                e.printStackTrace();
+            }                
         }   
     	else if (a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("StopHosting")){    
     		String value = a.get(2).split(":")[1]; 
-    		try{
-	    		if( myIPAddressesList.contains(a.get(1)) ) {
-	    			//String str = "P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value;
-	            	//myStringArray1.remove(str);
-	                myIPAddressesList.remove(a.get(1));
-	                lastResponded.remove(a.get(1));
-	                if( value.length() == 0 )
-	                	value = "no name entered";
-	                boolean removeSuccess = myNameList.remove(value.trim());
-	                if( !removeSuccess ){
-	                	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
-	                	clearHosts();
-	                }                
-	                System.out.println("Host removed:" + a.get(1) + "-" + value);
-	                Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
-	                Logger.addRecordToLog("Sizes of remaining arrays: " 
-	                					+ "-myIPAddressesList:" + myIPAddressesList.size()
-	                					+ "-myNameList:" + myNameList.size());
-	            }
-    		}
-    		catch( Exception e ){
-            	Logger.addRecordToLog("ERROR during remove host from list");
-            	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
+    		if( myIPAddressesList.contains(a.get(1)) ) {
+    			//String str = "P" + (myStringArray1.size() + 1) + ":" + a.get(1) + ":" + value;
+            	//myStringArray1.remove(str);
+                myIPAddressesList.remove(a.get(1));
+                if( value.length() == 0 )
+                	value = "no name entered";
+                boolean removeSuccess = myNameList.remove(value.trim());
+                if( !removeSuccess ){
+                	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
+                	clearHosts();
+                }
+                System.out.println("Host removed:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Host removed:" + a.get(1) + "-" + value);
+                Logger.addRecordToLog("Sizes of remaining arrays: " 
+                					+ "-myIPAddressesList:" + myIPAddressesList.size()
+                					+ "-myNameList:" + myNameList.size());
             }
     	}
     	else if( a.get(2).equals("GetMessages")){
@@ -207,59 +188,36 @@ public class ServerMain {
 
     public String processMsgFromClient(ArrayList<String> a) {
     	String response = "";
-    	try{
-	    	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("GetHost")){  
-	    		//remove outdate hosts:
-	    		ArrayList<Integer> toBeRemoved = new ArrayList<Integer>();
-	    		for(int i=0;i<myIPAddressesList.size();i++){
-	    			Date now = new Date();
-	    			if( lastResponded.get(myIPAddressesList.get(i)).compareTo(now) >= 300000 ){
-	    				toBeRemoved.add(i);
-	    				Logger.addRecordToLog("lastResponded: " + lastResponded.get(myIPAddressesList.get(i)) );
-	    				Logger.addRecordToLog("now: " + now );
-	    			}
-	    		}
-	    		for( Integer toBeRemovedIndex: toBeRemoved){
-	    			String removedHost = myNameList.get(toBeRemovedIndex);
-	    			myNameList.remove(toBeRemovedIndex);
-	    			lastResponded.remove(myIPAddressesList.get(toBeRemovedIndex));
-	    	    	myIPAddressesList.remove(toBeRemovedIndex);    	
-	    	    	Logger.addRecordToLog("removed host:" + removedHost);
-	    		}
-	            //get host lists
-	            System.out.println(myIPAddressesList.size() + " hosts found...");
-	            Logger.addRecordToLog(myIPAddressesList.size() + " hosts found...");
-	            for(int i=0;i<myIPAddressesList.size();i++){
-	            	if( i==0 )
-	            		response = "host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);
-	            	else
-	            		response = response + "@host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);                            
-	            	//myMessageQueue.add(response);
-	            }            
-	            System.out.println("Hosts list sent: " + response);
-	            Logger.addRecordToLog("Hosts list sent: " + response);
-	            try {
-	                Thread.sleep(500);//wait for client to start listening
-	            }
-	            catch( Exception e )
-	            {
-	                e.printStackTrace();
-	            }                
-	        } 
-	    	else if( a.get(2).equals("GetMessages")){
-	            response = thisObj.getSendersMessage(a);
-	    	}
-	    	else{
-	    		//server processing message received from clients
-	    		System.out.println("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
-	    		Logger.addRecordToLog("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
-	        	myMessageQueue.add(a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3)); 
-	    	}  
+    	if( a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("GetHost")){            
+            //get host lists
+            System.out.println(myIPAddressesList.size() + " hosts found...");
+            Logger.addRecordToLog(myIPAddressesList.size() + " hosts found...");
+            for(int i=0;i<myIPAddressesList.size();i++){
+            	if( i==0 )
+            		response = "host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);
+            	else
+            		response = response + "@host~" + myIPAddressesList.get(i) + "~HostResponse:" + myIPAddressesList.get(i) + "-" + myNameList.get(i);                            
+            	//myMessageQueue.add(response);
+            }            
+            System.out.println("Hosts list sent: " + response);
+            Logger.addRecordToLog("Hosts list sent: " + response);
+            try {
+                Thread.sleep(500);//wait for client to start listening
+            }
+            catch( Exception e )
+            {
+                e.printStackTrace();
+            }                
+        } 
+    	else if( a.get(2).equals("GetMessages")){
+            response = thisObj.getSendersMessage(a);
     	}
-    	catch( Exception e ){
-        	Logger.addRecordToLog("ERROR during processMsgFromClient");
-        	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
-        }
+    	else{
+    		//server processing message received from clients
+    		System.out.println("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
+    		Logger.addRecordToLog("message: " + a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3) +", queued ");
+        	myMessageQueue.add(a.get(0) + "~" + a.get(1) + "~" + a.get(2)  + "~" + a.get(3)); 
+    	}  
     	return response;
     };
 
@@ -267,7 +225,6 @@ public class ServerMain {
     	Logger.addRecordToLog("Clearing everything");
     	myNameList.clear();
     	myIPAddressesList.clear();
-    	lastResponded.clear();
     };
     
     public String prepareResponseMessage(String textRecvIn){
@@ -320,12 +277,6 @@ public class ServerMain {
 	            	myMessageQueue.remove(i);
 	            	break;
 	            }
-	    	}
-	    	//updates lastResponded if host IP
-	    	Date lastRespondedDateTime = lastResponded.get(address);
-	    	if( lastRespondedDateTime != null ){
-	    		lastResponded.remove(address);
-	    		lastResponded.put(address, new Date());
 	    	}
     	}
     	System.out.println("responding string: " + response + ", to: " + address);
