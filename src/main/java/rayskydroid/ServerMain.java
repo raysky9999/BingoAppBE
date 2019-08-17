@@ -213,7 +213,7 @@ public class ServerMain {
 	    		ArrayList<Integer> toBeRemoved = new ArrayList<Integer>();
 	    		for(int i=0;i<myIPAddressesList.size();i++){
 	    			Date now = new Date();
-	    			if( lastResponded.get(myIPAddressesList.get(i)).compareTo(now) >= 300000 ){
+	    			if( now.getTime() - lastResponded.get(myIPAddressesList.get(i)).getTime() >= 300000 ){
 	    				toBeRemoved.add(i);
 	    				Logger.addRecordToLog("lastResponded: " + lastResponded.get(myIPAddressesList.get(i)) );
 	    				Logger.addRecordToLog("now: " + now );
