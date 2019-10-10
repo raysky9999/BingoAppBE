@@ -3,6 +3,8 @@ package rayskydroid;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -150,7 +152,7 @@ public class ServerMain {
 	                lastResponded.put(a.get(1), new Date());
 	                if( value.length() == 0 )
 	                	value = "no name entered";
-	                myNameList.add(value.trim());               
+	                myNameList.add(value.trim().replace("\n", ""));               
 	                System.out.println("Host added:" + a.get(1) + "-" + value);
 	                Logger.addRecordToLog("Host added:" + a.get(1) + "-" + value);
 	            }
@@ -163,8 +165,11 @@ public class ServerMain {
 	            }   
             }
             catch( Exception e ){
+            	StringWriter sw = new StringWriter();
+        		PrintWriter pw = new PrintWriter(sw);
+        		e.printStackTrace(pw);
             	Logger.addRecordToLog("ERROR during add host to list");
-            	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
+            	Logger.addRecordToLog(e.getMessage() + " " + e.toString() + " " + sw.toString());
             }
         }   
     	else if (a.get(2).split(":").length > 1 && a.get(2).split(":")[0].equals("StopHosting")){    
@@ -177,9 +182,9 @@ public class ServerMain {
 	                lastResponded.remove(a.get(1));
 	                if( value.length() == 0 )
 	                	value = "no name entered";
-	                boolean removeSuccess = myNameList.remove(value.trim());
+	                boolean removeSuccess = myNameList.remove(value.trim().replace("\n", ""));
 	                if( !removeSuccess ){
-	                	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim());
+	                	Logger.addRecordToLog("Unable to remove myNameList item:" + value.trim().replace("\n", ""));
 	                	clearHosts();
 	                }                
 	                System.out.println("Host removed:" + a.get(1) + "-" + value);
@@ -190,8 +195,11 @@ public class ServerMain {
 	            }
     		}
     		catch( Exception e ){
+    			StringWriter sw = new StringWriter();
+        		PrintWriter pw = new PrintWriter(sw);
+        		e.printStackTrace(pw);
             	Logger.addRecordToLog("ERROR during remove host from list");
-            	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
+            	Logger.addRecordToLog(e.getMessage() + " " + e.toString() + " " + sw.toString());
             }
     	}
     	else if( a.get(2).equals("GetMessages")){
@@ -213,17 +221,23 @@ public class ServerMain {
 	    		ArrayList<Integer> toBeRemoved = new ArrayList<Integer>();
 	    		for(int i=0;i<myIPAddressesList.size();i++){
 	    			Date now = new Date();
-	    			if( now.getTime() - lastResponded.get(myIPAddressesList.get(i)).getTime() >= 300000 ){
-	    				toBeRemoved.add(i);
-	    				Logger.addRecordToLog("lastResponded: " + lastResponded.get(myIPAddressesList.get(i)) );
-	    				Logger.addRecordToLog("now: " + now );
+	    			if( lastResponded.get(myIPAddressesList.get(i)) != null ){
+		    			if( now.getTime() - lastResponded.get(myIPAddressesList.get(i)).getTime() >= 300000 ){
+		    				toBeRemoved.add(i);
+		    				Logger.addRecordToLog("lastResponded: " + lastResponded.get(myIPAddressesList.get(i)) );
+		    				Logger.addRecordToLog("now: " + now );
+		    			}
+	    			}
+	    			else{
+	    				Logger.addRecordToLog("lastResponded mismatch with myIPAddressesList");
+	    				clearHosts();
 	    			}
 	    		}
 	    		for( Integer toBeRemovedIndex: toBeRemoved){
-	    			String removedHost = myNameList.get(toBeRemovedIndex);
-	    			myNameList.remove(toBeRemovedIndex);
-	    			lastResponded.remove(myIPAddressesList.get(toBeRemovedIndex));
-	    	    	myIPAddressesList.remove(toBeRemovedIndex);    	
+	    			String removedHost = myNameList.get(toBeRemovedIndex.intValue());
+	    			myNameList.remove(toBeRemovedIndex.intValue());
+	    			lastResponded.remove(myIPAddressesList.get(toBeRemovedIndex.intValue()));
+	    	    	myIPAddressesList.remove(toBeRemovedIndex.intValue());    	
 	    	    	Logger.addRecordToLog("removed host:" + removedHost);
 	    		}
 	            //get host lists
@@ -257,14 +271,21 @@ public class ServerMain {
 	    	}  
     	}
     	catch( Exception e ){
+    		StringWriter sw = new StringWriter();
+    		PrintWriter pw = new PrintWriter(sw);
+    		e.printStackTrace(pw);
         	Logger.addRecordToLog("ERROR during processMsgFromClient");
-        	Logger.addRecordToLog(e.getMessage() + " " + e.toString());
+        	Logger.addRecordToLog(e.getMessage() + " " + e.toString() + " " + sw.toString());
         }
     	return response;
     };
 
     private void clearHosts(){
     	Logger.addRecordToLog("Clearing everything");
+    	Logger.addRecordToLog("Sizes of remaining arrays: " 
+				+ "-myIPAddressesList:" + myIPAddressesList.size()
+				+ "-myNameList:" + myNameList.size()
+				+ "-lastResponded:" + lastResponded.size());
     	myNameList.clear();
     	myIPAddressesList.clear();
     	lastResponded.clear();
